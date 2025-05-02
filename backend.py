@@ -31,7 +31,7 @@ def retrieveDataFromDatabase():
 
 def interpret_command_with_gpt(command):
     genai.configure(api_key=api_key)
-
+    
     generation_config = {
         "temperature": 1,
         "top_p": 0.95,
@@ -57,7 +57,7 @@ def interpret_command_with_gpt(command):
                 f"input: {command}",
                 "output: ",
                 ])
-
+    
     return response.text
 
 def process_interpreted_command(interpreted_command):
@@ -77,10 +77,10 @@ def process_interpreted_command(interpreted_command):
         return response
 
     elif kind == "mathematics":
-        # Handle a math expression
+        # Handle a math expression 
         result = parameters.get("result","Sorry, there was an error in evaluating the expression.")
         return result
-
+      
 
     elif kind == "date_time":
         # Handle date and time requests
@@ -94,7 +94,7 @@ def process_interpreted_command(interpreted_command):
     else:
         # Handle unknown actions
         return "I couldn't quite understand that. Please try another prompt."
-
+    
 def writeAssistantResponse(response):
     with st.chat_message("A"):
         placeholder = st.empty()  # Placeholder for typing effect

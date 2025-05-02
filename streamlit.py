@@ -61,5 +61,3 @@ if st.session_state.show_chatbot:
             # Display the assistant's response with typing animation
             addDataToDatabase(prompt, response)
             writeAssistantResponse(response)
-
-

@@ -1,121 +1,63 @@
-from dotenv import load_dotenv
-import os
-import google.generativeai as genai
-import json
-import datetime
+import streamlit as st
+from backend import interpret_command_with_gpt, process_interpreted_command, writeAssistantResponse, retrieveDataFromDatabase, addDataToDatabase
 
-def interpret_command_with_gpt(command):
-    load_dotenv()
-    genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
+# Initialize session state for messages, chatbot visibility, and context
+if "messages" not in st.session_state:
+    st.session_state.messages = []
+if "show_chatbot" not in st.session_state:
+    st.session_state.show_chatbot = False
+if "context" not in st.session_state:
+    st.session_state.context = ""  # Initialize context to store conversation history
 
-    generation_config = {
-        "temperature": 1,
-        "top_p": 0.95,
-        "top_k": 64,
-        "max_output_tokens": 8192,
-        "response_mime_type": "application/json",
-    }
+# Title of the app
+st.title("Example Chatbot using Gemini API")
 
-    model = genai.GenerativeModel(
-        model_name="gemini-1.5-flash",
-        generation_config=generation_config,
-    )
+# Button to start chatting with the bot
+if st.button("Start Chatting"):
+    st.session_state.show_chatbot = True
+    history = retrieveDataFromDatabase()
+    for chat in history:
+        st.session_state.messages.append({"role": "user", "content": chat["user"]})
+        st.session_state.messages.append({"role": "assistant", "content": chat["bot"]})
 
-    response = model.generate_content([
+    # Initial message from the assistant when chat starts
+    response = "Hi there, How can I assist you?"
+    st.session_state.context += f"Bot: {response}\n"  # Add response to the context
 
+# Display the chatbot interface once the chat starts
+if st.session_state.show_chatbot:
+    # Display each message from the session state
+    for message in st.session_state.messages:
+        with st.chat_message(message["role"]):
+            st.markdown(message["content"])
 
-        "input: Hello, how are you?",
-        "output: {"
-            "\n    \"kind\": \"general_chat\","
-            "\n    \"parameters\": {"
-            "\n        \"response\": \"I'm doing great, thank you! How can I assist you today?\""
-            "\n    }"
-            "\n}",
-
-
-        "input: Can you write a Python program to add two numbers?",
-        "output: {"
-            "\n    \"kind\": \"generate_code\","
-            "\n    \"parameters\": {"
-            "\n        \"task\": \"add two numbers\","
-            "\n        \"code\": \"def add_two_numbers(num1, num2):\\n\\n"
-            "\n                    return num1 + num2\\n\\n"
-            "\n                    number1 = float(input(\\\"Enter the first number: \\\"))\\n"
-            "\n                    number2 = float(input(\\\"Enter the second number: \\\"))\\n\\n"
-            "\n                    result = add_two_numbers(number1, number2)\\n\\n"
-            "\n                    print(\\\"The sum of\\\", number1, \\\" and \\\",number2,\\\" is \\\",result)\\n\","
-            "\n        \"language\": \"Python\""
-            "\n    }"
-            "\n}",
-
-
-        "input: What is the current date?",
-        "output: {"
-            "\n    \"kind\": \"date_time\","
-            "\n    \"parameters\": {"
-            "\n        \"response\": \"The current date is: {{current_date}}\""
-            "\n    }"
-            "\n}",
-
-
-        "input: 3+5",
-        "output: {"
-            "\n    \"kind\": \"mathematics\","
-            "\n    \"parameters\": {"
-            "\n        \"result\": \"3+5 is 8\""
-            "\n    }"
-            "\n}",
-
-
-        f"input: {command}",
-        "output: "
-    ])
-
-    return response.text
-
-def process_interpreted_command(interpreted_command):
-
-    command_data = json.loads(interpreted_command)
-    kind = command_data["kind"]
-    parameters = command_data["parameters"]
-
-    if kind == "generate_code":
-        # Handle the generation of code
-        code = parameters.get("code", "")
-        return code
-
-    elif kind == "general_chat":
-        # Handle a general chat response
-        response = parameters.get("response", "No response provided.")
-        return response
-
-    elif kind == "mathematics":
-        # Handle a math expression
-        result = parameters.get("result","Sorry, there was an error in evaluating the expression.")
-        return result
-
-
-    elif kind == "date_time":
-        # Handle date and time requests
-        response = parameters.get("response", "")
-        current_date = datetime.datetime.now().strftime("%Y-%m-%d")
-        current_time = datetime.datetime.now().strftime("%H:%M")
-        response = response.replace("{{current_date}}", current_date)
-        response = response.replace("{{current_time}}", current_time)
-        return response
-
-    else:
-        # Handle unknown actions
-        return "I couldn't quite understand that. Please try another prompt."
-
-def main():
-    a = ""
-    while True:
-        a = f"Previous chat context: {a}\n\nCurrent message: " + str(input("Enter Your prompt: "))
-
-        b = interpret_command_with_gpt(a)
-        result = process_interpreted_command(b)
-        print(result)
-        a += "\n"
-
-main()  #calling the main funtion
+    # User prompt input
+    if prompt := st.chat_input("What is up?"):
+        # Display the user input in the chat window
+        with st.chat_message("user"):
+            st.markdown(f"You: {prompt}")
+        # Save user input to session state
+        st.session_state.messages.append({"role": "user", "content": f"You: {prompt}"})
+        
+        # Append user input to context
+        st.session_state.context += f"User: {prompt}\n"
+        
+        # Interpret the command with GPT, passing the full conversation context
+        full_prompt = f"Previous chat context: {st.session_state.context}\n\nCurrent message: {prompt}"
+        interpreted_command = interpret_command_with_gpt(full_prompt)
+        
+        # Process the interpreted command (generates response)
+        response = process_interpreted_command(interpreted_command)
+        
+        # Append assistant's response to context
+        st.session_state.context += f"Bot: {response}\n"
+        
+        # Display the assistant's response with typing animation
+        if "code" in response:  # Simple heuristic to detect code-related output
+            with st.chat_message("A"):
+                a = response["language"]
+                st.code(response, language= "python")  # Display response as a Python code block
+        else:
+            # Display the assistant's response with typing animation
+            addDataToDatabase(prompt, response)
+            writeAssistantResponse(response) 
