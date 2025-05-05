@@ -2,8 +2,6 @@
 
 A conversational AI assistant powered by Google's Gemini API with Firebase integration for chat history persistence.
 
-![Rytex AI Logo](https://via.placeholder.com/150)
-
 ## 📖 Overview
 
 Rytex is an intelligent chatbot application built with Streamlit and Google's Generative AI capabilities. It interprets user inputs, provides contextually relevant responses, and remembers conversation history through Firebase integration.
