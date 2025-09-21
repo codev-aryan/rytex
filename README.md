@@ -35,7 +35,7 @@ Rytex is an intelligent chatbot application built with Streamlit and Google's Ge
 
 1. Clone the repository
    ```bash
-   git clone https://github.com/cipherex/rytex.git
+   git clone https://github.com/codev-aryan/rytex.git
    cd rytex
    ```
 
@@ -123,7 +123,7 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 
 ## 👥 Contributors
 
-- Cipherex
+- codev-aryan
 
 ## 🙏 Acknowledgments
 
